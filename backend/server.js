@@ -11,6 +11,7 @@ app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:3000' }));
 app.use(express.json());
 app.use(morgan('dev'));
 
+app.use('/api/auth',       require('./routes/auth'));
 app.use('/api/dashboard',  require('./routes/dashboard'));
 app.use('/api/candidates', require('./routes/candidates'));
 app.use('/api/events',     require('./routes/events'));
