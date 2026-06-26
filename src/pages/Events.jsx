@@ -1,48 +1,53 @@
-import React, { useState } from 'react';
-
-// ─── BACKEND TEAM: replace with GET /api/events ───────────────────────────
-const MOCK_EVENTS = [
-  {
-    id: 1,
-    name: 'Pune Mega-Drive',
-    venue: 'Symbiosis Intl.',
-    dates: 'Jul 14–16, 2025',
-    status: 'Active',
-    registered: 487,
-    shortlisted: 142,
-    corporates: 8,
-    schedule: [
-      { day: 'Day 1', bg: '#EEEDFE', color: '#3C3489', desc: 'Pre-placement talks & aptitude screening' },
-      { day: 'Day 2', bg: '#E1F5EE', color: '#085041', desc: 'GD round + Technical interviews' },
-      { day: 'Day 3', bg: '#FAEEDA', color: '#633806', desc: 'Personal interviews + Spot offers' },
-    ],
-    note: null,
-  },
-  {
-    id: 2,
-    name: 'Bangalore Drive',
-    venue: 'Christ University',
-    dates: 'Jul 22–24, 2025',
-    status: 'Active',
-    registered: 612,
-    shortlisted: null,
-    corporates: 11,
-    schedule: null,
-    note: 'Screening test scheduled 3 days before event. Corporate kits being prepared. Hotel block: Taj Yeshwantpur.',
-  },
-];
+import React, { useState, useEffect } from 'react';
+import { getEvents, createEvent } from '../api';
 
 const MOCK_ASSIGNMENTS = [
-  { company: 'Infosys BPM',  industry: 'IT Services', profiles: 'Analyst, Developer', openings: 25, buddy: 'Kavita M.', status: 'Confirmed',    statusTag: 'tag-green' },
-  { company: 'Bajaj Finserv',industry: 'BFSI',        profiles: 'Sales, Ops',         openings: 40, buddy: 'Arjun S.',  status: 'Confirmed',    statusTag: 'tag-green' },
-  { company: 'Wipro',        industry: 'IT Services', profiles: 'Fresher Dev',         openings: 30, buddy: 'Pooja R.', status: 'Kit pending',  statusTag: 'tag-amber' },
-  { company: 'ICICI Bank',   industry: 'Banking',     profiles: 'RO, SO',              openings: 50, buddy: 'Rahul T.', status: 'Confirmed',    statusTag: 'tag-green' },
-  { company: 'Marico',       industry: 'FMCG',        profiles: 'MT, Intern',          openings: 15, buddy: '–',        status: 'Needs buddy',  statusTag: 'tag-coral' },
+  { company: 'Infosys BPM',   industry: 'IT Services', profiles: 'Analyst, Developer', openings: 25, buddy: 'Kavita M.', status: 'Confirmed',   statusTag: 'tag-green' },
+  { company: 'Bajaj Finserv', industry: 'BFSI',        profiles: 'Sales, Ops',         openings: 40, buddy: 'Arjun S.',  status: 'Confirmed',   statusTag: 'tag-green' },
+  { company: 'Wipro',         industry: 'IT Services', profiles: 'Fresher Dev',         openings: 30, buddy: 'Pooja R.', status: 'Kit pending', statusTag: 'tag-amber' },
+  { company: 'ICICI Bank',    industry: 'Banking',     profiles: 'RO, SO',              openings: 50, buddy: 'Rahul T.', status: 'Confirmed',   statusTag: 'tag-green' },
+  { company: 'Marico',        industry: 'FMCG',        profiles: 'MT, Intern',          openings: 15, buddy: '–',        status: 'Needs buddy', statusTag: 'tag-coral' },
 ];
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function Events() {
-  const [selectedEvent, setSelectedEvent] = useState(MOCK_EVENTS[0].id);
+  const [events,        setEvents]        = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showModal,     setShowModal]     = useState(false);
+  const [submitting,    setSubmitting]    = useState(false);
+  const [newEvent,      setNewEvent]      = useState({ name: '', venue: '', dates: '', city: '', status: 'Upcoming' });
+
+  useEffect(() => {
+    getEvents()
+      .then(data => {
+        setEvents(data);
+        if (data.length > 0) setSelectedEvent(data[0].id);
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleCreateEvent = async () => {
+    if (!newEvent.name) return;
+    setSubmitting(true);
+    try {
+      const created = await createEvent(newEvent);
+      setEvents(prev => [created, ...prev]);
+      setSelectedEvent(created.id);
+      setShowModal(false);
+      setNewEvent({ name: '', venue: '', dates: '', city: '', status: 'Upcoming' });
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const selected = events.find(e => e.id === selectedEvent);
+
+  if (loading) return <div className="page"><p>Loading events…</p></div>;
+  if (error)   return <div className="page"><p style={{ color: '#D85A30' }}>Error: {error}</p></div>;
 
   return (
     <div className="page">
@@ -52,69 +57,51 @@ export default function Events() {
       </div>
 
       {/* Event Cards */}
-      <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
-        {MOCK_EVENTS.map(ev => (
-          <div
-            key={ev.id}
-            className="card"
-            style={{
-              flex: 1,
-              cursor: 'pointer',
-              border: selectedEvent === ev.id ? '2px solid #7F77DD' : '0.5px solid #e5e5e5',
-            }}
-            onClick={() => setSelectedEvent(ev.id)}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>{ev.name}</div>
-                <div style={{ fontSize: 12, color: '#888' }}>{ev.dates} · {ev.venue}</div>
+      {events.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: 40, color: '#888' }}>
+          No events yet. Click "+ Add event" to create one.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 14, marginBottom: 14, flexWrap: 'wrap' }}>
+          {events.map(ev => (
+            <div
+              key={ev.id}
+              className="card"
+              style={{
+                flex: 1, minWidth: 260, cursor: 'pointer',
+                border: selectedEvent === ev.id ? '2px solid #7F77DD' : '0.5px solid #e5e5e5',
+              }}
+              onClick={() => setSelectedEvent(ev.id)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{ev.name}</div>
+                  <div style={{ fontSize: 12, color: '#888' }}>{ev.dates} · {ev.venue}</div>
+                </div>
+                <span className="tag tag-purple">{ev.status}</span>
               </div>
-              <span className="tag tag-purple">{ev.status}</span>
-            </div>
 
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-              {[
-                { label: 'Registered',  val: ev.registered },
-                { label: 'Shortlisted', val: ev.shortlisted ?? '–' },
-                { label: 'Corporates',  val: ev.corporates },
-              ].map(s => (
-                <div key={s.label} style={{ textAlign: 'center', padding: 8, background: '#f5f5f7', borderRadius: 8 }}>
-                  <div style={{ fontSize: 18, fontWeight: 600 }}>{s.val}</div>
-                  <div style={{ fontSize: 11, color: '#888' }}>{s.label}</div>
-                </div>
-              ))}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'Registered',  val: ev.registered  ?? 0 },
+                  { label: 'Shortlisted', val: ev.shortlisted ?? '–' },
+                  { label: 'City',        val: ev.city        ?? '–' },
+                ].map(s => (
+                  <div key={s.label} style={{ textAlign: 'center', padding: 8, background: '#f5f5f7', borderRadius: 8 }}>
+                    <div style={{ fontSize: 18, fontWeight: 600 }}>{s.val}</div>
+                    <div style={{ fontSize: 11, color: '#888' }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-
-            {/* Schedule or note */}
-            {ev.schedule && (
-              <>
-                <div className="divider" />
-                <div style={{ fontSize: 12, fontWeight: 500, color: '#888', marginBottom: 6 }}>Day-wise schedule</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {ev.schedule.map(d => (
-                    <div key={d.day} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                      <span style={{ background: d.bg, color: d.color, padding: '2px 6px', borderRadius: 4, fontWeight: 500, minWidth: 40, textAlign: 'center' }}>{d.day}</span>
-                      <span style={{ color: '#888' }}>{d.desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-            {ev.note && (
-              <>
-                <div className="divider" />
-                <div style={{ fontSize: 12, color: '#888' }}>{ev.note}</div>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Corporate Assignments Table */}
       <div className="card">
         <div className="card-title">
-          Corporate assignments — {MOCK_EVENTS.find(e => e.id === selectedEvent)?.name}
+          Corporate assignments — {selected?.name || 'select an event'}
         </div>
         <table className="table">
           <thead>
@@ -143,11 +130,53 @@ export default function Events() {
       </div>
 
       <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-        {/* ─── BACKEND TEAM: POST /api/events to create a new event ─── */}
-        <button className="btn btn-primary" onClick={() => alert('Backend team: open New Event modal / form')}>
-          + Add event
-        </button>
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add event</button>
       </div>
+
+      {/* Add Event Modal */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: 420, margin: 0 }}>
+            <div className="card-title" style={{ marginBottom: 16 }}>Create new event</div>
+            <div className="form-group">
+              <label className="form-label">Event name *</label>
+              <input className="form-input" placeholder="e.g. Pune Mega-Drive"
+                value={newEvent.name} onChange={e => setNewEvent(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Venue</label>
+              <input className="form-input" placeholder="e.g. Symbiosis Intl. University"
+                value={newEvent.venue} onChange={e => setNewEvent(p => ({ ...p, venue: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Dates</label>
+              <input className="form-input" placeholder="e.g. Jul 14–16, 2025"
+                value={newEvent.dates} onChange={e => setNewEvent(p => ({ ...p, dates: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">City</label>
+              <input className="form-input" placeholder="e.g. Pune"
+                value={newEvent.city} onChange={e => setNewEvent(p => ({ ...p, city: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select className="form-select" value={newEvent.status}
+                onChange={e => setNewEvent(p => ({ ...p, status: e.target.value }))}>
+                <option>Upcoming</option>
+                <option>Ongoing</option>
+                <option>Completed</option>
+                <option>Planning</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button className="btn" onClick={() => setShowModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleCreateEvent} disabled={submitting}>
+                {submitting ? 'Creating…' : 'Create event'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

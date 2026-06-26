@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
+import { registerCandidate } from '../api';
 
-const STEPS = ['Basic info', 'Academic', 'Preferences', 'Resume', 'Confirm'];
-
-const CITIES    = ['Pune', 'Bangalore', 'Hyderabad', 'Indore', 'Lucknow'];
-const PROFILES  = ['Software Dev', 'Sales & Mktg', 'Finance', 'Operations', 'HR', 'Data Analytics'];
+const STEPS    = ['Basic info', 'Academic', 'Preferences', 'Resume', 'Confirm'];
+const CITIES   = ['Pune', 'Bangalore', 'Hyderabad', 'Indore', 'Lucknow'];
+const PROFILES = ['Software Dev', 'Sales & Mktg', 'Finance', 'Operations', 'HR', 'Data Analytics'];
 const EMP_TYPES = ['Fresher / Full-time', 'Internship', 'Both'];
 
-// ─── BACKEND TEAM: POST /api/register with the formData below ─────────────
-// Fields: name, email, phone, college, degree, gradYear, type,
-//         cities[], profiles[], empType, b2bInterest, franchiseInterest
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function Register() {
-  const [step, setStep] = useState(1); // 1-indexed, matching STEPS array (1=Basic, 2=Academic…)
+  const [step,       setStep]       = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const [success,    setSuccess]    = useState(false);
+  const [apiError,   setApiError]   = useState('');
+  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeName, setResumeName] = useState('');
 
-  // Form state — all fields in one object for easy API submission
   const [form, setForm] = useState({
     name: '', email: '', phone: '',
     college: '', degree: '', gradYear: '2025 (current)', type: 'Student',
@@ -31,11 +30,70 @@ export default function Register() {
     });
   };
 
-  const handleSubmit = () => {
-    // ─── BACKEND TEAM: replace alert with real API call ─────────────────────
-    // fetch('/api/register', { method: 'POST', body: JSON.stringify(form), headers: {'Content-Type':'application/json'} })
-    alert('Backend team: submit form data to POST /api/register\n\n' + JSON.stringify(form, null, 2));
+  const handleResumeChange = (e) => {
+    const file = e.target.files[0];
+    if (file) { setResumeFile(file); setResumeName(file.name); }
   };
+
+  const handleSubmit = async () => {
+    if (!form.name || !form.email) {
+      setApiError('Name and email are required.');
+      return;
+    }
+    setSubmitting(true);
+    setApiError('');
+    try {
+      // Map form fields to what Supabase candidates table expects
+      const payload = {
+        name:            form.name,
+        email:           form.email,
+        phone:           form.phone,
+        college:         form.college,
+        profile:         form.profiles[0] || '',
+        city:            form.cities[0]   || '',
+        status:          'Registered',
+      };
+      await registerCandidate(payload);
+      setSuccess(true);
+    } catch (err) {
+      setApiError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setSuccess(false);
+    setStep(1);
+    setApiError('');
+    setResumeName('');
+    setResumeFile(null);
+    setForm({
+      name: '', email: '', phone: '',
+      college: '', degree: '', gradYear: '2025 (current)', type: 'Student',
+      cities: ['Pune'], profiles: ['Software Dev'], empType: 'Fresher / Full-time',
+      b2bInterest: false, franchiseInterest: false,
+    });
+  };
+
+  // ── Success screen ──
+  if (success) {
+    return (
+      <div className="page">
+        <div className="card" style={{ textAlign: 'center', padding: 48 }}>
+          <i className="ti ti-circle-check" style={{ fontSize: 56, color: '#1D9E75' }} />
+          <h2 style={{ color: '#3C3489', marginTop: 16 }}>Registration Successful!</h2>
+          <p style={{ color: '#666', marginTop: 8 }}>
+            Thank you <strong>{form.name}</strong>! You're registered for the Talent Corner Campus Drive.
+            We'll be in touch soon.
+          </p>
+          <button className="btn btn-primary" style={{ marginTop: 24 }} onClick={resetForm}>
+            Register Another Candidate
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
@@ -47,7 +105,7 @@ export default function Register() {
       {/* Stepper */}
       <div className="step-bar">
         {STEPS.map((label, i) => {
-          const num = i + 1;
+          const num   = i + 1;
           const state = num < step ? 'done' : num === step ? 'active-step' : 'todo';
           return (
             <React.Fragment key={label}>
@@ -73,12 +131,12 @@ export default function Register() {
           <div className="card">
             <div className="card-title" style={{ marginBottom: 16 }}>Personal details</div>
             <div className="form-group">
-              <label className="form-label">Full name</label>
+              <label className="form-label">Full name *</label>
               <input className="form-input" type="text" placeholder="e.g. Ananya Rao"
                 value={form.name} onChange={e => set('name', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="form-label">Email address</label>
+              <label className="form-label">Email address *</label>
               <input className="form-input" type="email" placeholder="e.g. ananya@email.com"
                 value={form.email} onChange={e => set('email', e.target.value)} />
             </div>
@@ -93,10 +151,7 @@ export default function Register() {
               <i className="ti ti-qrcode" style={{ fontSize: 40, color: '#aaa' }} />
               <div style={{ fontSize: 11, color: '#888' }}>QR scan</div>
             </div>
-            <div style={{ fontSize: 12, color: '#888', textAlign: 'center' }}>
-              {/* ─── BACKEND TEAM: generate QR for this registration session ─── */}
-              Scan to pre-fill on mobile
-            </div>
+            <div style={{ fontSize: 12, color: '#888', textAlign: 'center' }}>Scan to pre-fill on mobile</div>
           </div>
         </div>
       )}
@@ -129,8 +184,7 @@ export default function Register() {
               <div className="radio-group">
                 {['Student', 'Alumni'].map(t => (
                   <label className="radio-opt" key={t}>
-                    <input type="radio" name="type" checked={form.type === t} onChange={() => set('type', t)} />
-                    {t}
+                    <input type="radio" name="type" checked={form.type === t} onChange={() => set('type', t)} /> {t}
                   </label>
                 ))}
               </div>
@@ -139,11 +193,8 @@ export default function Register() {
               <label className="form-label">Preferred drive city</label>
               <div className="chip-row">
                 {CITIES.map(city => (
-                  <div
-                    key={city}
-                    className={`chip ${form.cities.includes(city) ? 'selected' : ''}`}
-                    onClick={() => toggleArray('cities', city)}
-                  >{city}</div>
+                  <div key={city} className={`chip ${form.cities.includes(city) ? 'selected' : ''}`}
+                    onClick={() => toggleArray('cities', city)}>{city}</div>
                 ))}
               </div>
             </div>
@@ -154,11 +205,8 @@ export default function Register() {
               <div className="card-title">Job profile interest</div>
               <div className="chip-row">
                 {PROFILES.map(p => (
-                  <div
-                    key={p}
-                    className={`chip ${form.profiles.includes(p) ? 'selected' : ''}`}
-                    onClick={() => toggleArray('profiles', p)}
-                  >{p}</div>
+                  <div key={p} className={`chip ${form.profiles.includes(p) ? 'selected' : ''}`}
+                    onClick={() => toggleArray('profiles', p)}>{p}</div>
                 ))}
               </div>
               <div className="divider" />
@@ -167,8 +215,7 @@ export default function Register() {
                 <div className="radio-group">
                   {EMP_TYPES.map(t => (
                     <label className="radio-opt" key={t}>
-                      <input type="radio" name="emp" checked={form.empType === t} onChange={() => set('empType', t)} />
-                      {t}
+                      <input type="radio" name="emp" checked={form.empType === t} onChange={() => set('empType', t)} /> {t}
                     </label>
                   ))}
                 </div>
@@ -178,27 +225,25 @@ export default function Register() {
             <div className="card">
               <div className="card-title">Additional questions</div>
               <div className="form-group">
-                <label className="form-label">Is your current company looking for recruitment partners? <span style={{ color: '#888' }}>(alumni only)</span></label>
+                <label className="form-label">Is your company looking for recruitment partners?</label>
                 <div className="radio-group">
                   {['Yes, connect me', 'No'].map(opt => (
                     <label className="radio-opt" key={opt}>
                       <input type="radio" name="b2b"
                         checked={(opt === 'Yes, connect me') === form.b2bInterest}
-                        onChange={() => set('b2bInterest', opt === 'Yes, connect me')} />
-                      {opt}
+                        onChange={() => set('b2bInterest', opt === 'Yes, connect me')} /> {opt}
                     </label>
                   ))}
                 </div>
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Interested in exploring a Talent Corner Franchise?</label>
+                <label className="form-label">Interested in a Talent Corner Franchise?</label>
                 <div className="radio-group">
                   {['Yes, tell me more', 'Not right now'].map(opt => (
                     <label className="radio-opt" key={opt}>
                       <input type="radio" name="fran"
                         checked={(opt === 'Yes, tell me more') === form.franchiseInterest}
-                        onChange={() => set('franchiseInterest', opt === 'Yes, tell me more')} />
-                      {opt}
+                        onChange={() => set('franchiseInterest', opt === 'Yes, tell me more')} /> {opt}
                     </label>
                   ))}
                 </div>
@@ -208,14 +253,13 @@ export default function Register() {
         </div>
       )}
 
-      {/* ── STEP 3: Preferences (simplified — extend as needed) ── */}
+      {/* ── STEP 3: Preferences ── */}
       {step === 3 && (
         <div className="card">
           <div className="card-title">Salary & role preferences</div>
           <div className="empty" style={{ padding: '48px 0' }}>
             <i className="ti ti-adjustments" style={{ fontSize: 32, color: '#ccc', display: 'block', marginBottom: 8 }} />
-            Backend team: add salary range, work mode (WFH/Office), relocation willingness fields here.<br />
-            Frontend will wire them to form state once fields are defined.
+            Add salary range, work mode, relocation fields here as needed.
           </div>
         </div>
       )}
@@ -228,11 +272,16 @@ export default function Register() {
           </div>
           <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 4 }}>Upload your resume</div>
           <div style={{ fontSize: 13, color: '#888', marginBottom: 20 }}>PDF or DOCX, max 5MB</div>
-          {/* ─── BACKEND TEAM: POST /api/upload/resume — return a file URL ─── */}
-          <input type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }} id="resume-upload" />
+          <input type="file" accept=".pdf,.doc,.docx" style={{ display: 'none' }}
+            id="resume-upload" onChange={handleResumeChange} />
           <label htmlFor="resume-upload" className="btn btn-primary" style={{ cursor: 'pointer' }}>
             <i className="ti ti-upload" /> Choose file
           </label>
+          {resumeName && (
+            <div style={{ marginTop: 12, fontSize: 13, color: '#1D9E75' }}>
+              ✅ {resumeName} selected
+            </div>
+          )}
         </div>
       )}
 
@@ -243,16 +292,17 @@ export default function Register() {
           <table className="table">
             <tbody>
               {[
-                ['Name', form.name || '—'],
-                ['Email', form.email || '—'],
-                ['Phone', form.phone || '—'],
-                ['College', form.college || '—'],
-                ['Degree', form.degree || '—'],
+                ['Name',       form.name     || '—'],
+                ['Email',      form.email    || '—'],
+                ['Phone',      form.phone    || '—'],
+                ['College',    form.college  || '—'],
+                ['Degree',     form.degree   || '—'],
                 ['Graduation', form.gradYear],
-                ['Type', form.type],
-                ['Cities', form.cities.join(', ')],
-                ['Profiles', form.profiles.join(', ')],
+                ['Type',       form.type],
+                ['Cities',     form.cities.join(', ')],
+                ['Profiles',   form.profiles.join(', ')],
                 ['Employment', form.empType],
+                ['Resume',     resumeName    || 'Not uploaded'],
               ].map(([k, v]) => (
                 <tr key={k}>
                   <td style={{ color: '#888', width: 160 }}>{k}</td>
@@ -265,6 +315,9 @@ export default function Register() {
       )}
 
       {/* Navigation */}
+      {apiError && (
+        <div style={{ color: '#D85A30', marginTop: 8, fontSize: 13 }}>⚠ {apiError}</div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
         {step > 1 && (
           <button className="btn" onClick={() => setStep(s => s - 1)}>← Back</button>
@@ -274,8 +327,8 @@ export default function Register() {
             Save & continue →
           </button>
         ) : (
-          <button className="btn btn-primary" onClick={handleSubmit}>
-            <i className="ti ti-check" /> Submit registration
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+            <i className="ti ti-check" /> {submitting ? 'Submitting…' : 'Submit registration'}
           </button>
         )}
       </div>
