@@ -17,7 +17,7 @@ app.use('/api/candidates', require('./routes/candidates'));
 app.use('/api/events',     require('./routes/events'));
 app.use('/api/corporates', require('./routes/corporates'));
 app.use('/api/register',   require('./routes/register'));
-
+app.use('/api/jobs', require('./routes/jobs'));
 app.get('/', (req, res) => res.json({ status: 'Talent Corner API running ✅' }));
 
 app.use((err, req, res, next) => {
