@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Candidates from './pages/Candidates';
@@ -17,38 +17,18 @@ const PAGES = {
 };
 
 export default function App() {
-  const [page,  setPage]  = useState('dashboard');
-  const [admin, setAdmin] = useState(null);
+  const [page, setPage] = useState('dashboard');
+  const [loggedIn, setLoggedIn] = useState(false);
 
-  // Check if already logged in
-  useEffect(() => {
-    const token = localStorage.getItem('tc_token');
-    const saved = localStorage.getItem('tc_admin');
-    if (token && saved) {
-      setAdmin(JSON.parse(saved));
-    }
-  }, []);
-
-  const handleLogin = (adminData) => {
-    setAdmin(adminData);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('tc_token');
-    localStorage.removeItem('tc_admin');
-    setAdmin(null);
-  };
-
-  // Show login page if not logged in
-  if (!admin) {
-    return <Login onLogin={handleLogin} />;
+  if (!loggedIn) {
+    return <Login onLogin={() => setLoggedIn(true)} />;
   }
 
   return (
     <>
-      <Navbar activePage={page} onNavigate={setPage} onLogout={handleLogout} admin={admin} />
+      <Navbar activePage={page} onNavigate={setPage} />
       <main>
-        {PAGES[page] ?? <div style={{ padding: 48, textAlign: 'center', color: '#888' }}>Page not found.</div>}
+        {PAGES[page]}
       </main>
     </>
   );
