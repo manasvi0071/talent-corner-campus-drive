@@ -10,17 +10,28 @@ import CityChecklist from './pages/CityChecklist';
 import './styles/global.css';
 
 const PAGES = {
-  dashboard:  <Dashboard />,
+  dashboard: <Dashboard />,
   candidates: <Candidates />,
-  events:     <Events />,
-  register:   <Register />,
+  events: <Events />,
+  register: <Register />,
   corporates: <Corporates />,
-  checklist:  <CityChecklist />,
+  checklist: <CityChecklist />,
 };
 
 export default function App() {
-  const [page, setPage]         = useState('dashboard');
+  const [page, setPage] = useState('dashboard');
   const [loggedIn, setLoggedIn] = useState(false);
+
+  // Dummy admin information
+  const admin = {
+    name: 'Admin',
+    email: 'admin@talentcorner.com',
+  };
+
+  // Logout function
+  const handleLogout = () => {
+    setLoggedIn(false);
+  };
 
   if (!loggedIn) {
     return <Login onLogin={() => setLoggedIn(true)} />;
@@ -28,10 +39,22 @@ export default function App() {
 
   return (
     <>
-      <Navbar activePage={page} onNavigate={setPage} />
+      <Navbar
+        activePage={page}
+        onNavigate={setPage}
+        onLogout={handleLogout}
+        admin={admin}
+      />
+
       <main>
         {PAGES[page] ?? (
-          <div style={{ padding: 48, textAlign: 'center', color: '#888' }}>
+          <div
+            style={{
+              padding: 48,
+              textAlign: 'center',
+              color: '#888',
+            }}
+          >
             Page not found.
           </div>
         )}
