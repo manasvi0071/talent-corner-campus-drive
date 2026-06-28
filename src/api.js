@@ -24,3 +24,4 @@ export const createEvent        = (payload) => api('/api/events', { method: 'POS
 export const getCorporates      = () => api('/api/corporates');
 export const createCorporate    = (payload) => api('/api/corporates', { method: 'POST', body: JSON.stringify(payload) });
 export const registerCandidate  = (payload) => api('/api/register', { method: 'POST', body: JSON.stringify(payload) });
+export const getJobRoles = () => api('/api/job-roles');
