@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getCandidates, updateCandidateStatus, exportCandidatesCSV } from '../api';
+import { getCandidates, updateCandidateStatus} from '../api';
 
 const getInitials = (name) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 

@@ -1,127 +1,227 @@
-import React, { useState, useEffect } from 'react';
-import { getCandidates, updateCandidateStatus } from '../api';
+import React, { useEffect, useState } from 'react';
+import { getDashboardStats } from '../api';
 
-export default function Candidates() {
-  const [candidates, setCandidates] = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState(null);
-  const [search, setSearch]         = useState('');
-  const [cityFilter, setCityFilter]         = useState('');
-  const [statusFilter, setStatusFilter]     = useState('');
-  const [profileFilter, setProfileFilter]   = useState('');
+const PIPELINE_META = [
+  { key: 'registered',  label: 'Registered',  step: 1, color: '#7F77DD', bg: '#EEEDFE', textColor: '#3C3489' },
+  { key: 'screened',    label: 'Screened',     step: 2, color: '#1D9E75', bg: '#E1F5EE', textColor: '#085041' },
+  { key: 'shortlisted', label: 'Shortlisted',  step: 3, color: '#BA7517', bg: '#FAEEDA', textColor: '#633806' },
+  { key: 'interviewed', label: 'Interviewed',  step: 4, color: '#D85A30', bg: '#FAECE7', textColor: '#4A1B0C' },
+  { key: 'offered',     label: 'Offered',      step: 5, color: '#639922', bg: '#EAF3DE', textColor: '#173404' },
+];
 
-  const fetchCandidates = () => {
-    setLoading(true);
-    getCandidates({ search, city: cityFilter, status: statusFilter, profile: profileFilter })
-      .then(data => setCandidates(data))
+const MOCK_CITIES = [
+  { city: 'Pune',      reg: 487, short: 142, status: 'Active',    tag: 'tag-purple' },
+  { city: 'Bangalore', reg: 612, short: 198, status: 'Active',    tag: 'tag-purple' },
+  { city: 'Hyderabad', reg: 541, short: 176, status: 'Completed', tag: 'tag-green'  },
+  { city: 'Indore',    reg: 334, short: '–', status: 'Planning',  tag: 'tag-amber'  },
+  { city: 'Lucknow',   reg: 220, short: '–', status: 'Early',     tag: 'tag-gray'   },
+];
+
+export default function Dashboard() {
+  const [stats,    setStats]    = useState({
+    registered: 0, screened: 0, shortlisted: 0,
+    interviewed: 0, offered: 0, partners: 0,
+  });
+  const [events,   setEvents]   = useState([]);
+  const [b2bleads, setB2bleads] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+
+  useEffect(() => {
+    getDashboardStats()
+      .then(data => {
+        setStats(data.stats   || data);
+        setEvents(data.events     || []);
+        setB2bleads(data.b2bleads || []);
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { fetchCandidates(); }, [search, cityFilter, statusFilter, profileFilter]);
+  if (loading) return (
+    <div className="page">
+      <div style={{ textAlign: 'center', padding: 60, color: '#888' }}>
+        Loading dashboard...
+      </div>
+    </div>
+  );
 
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      await updateCandidateStatus(id, newStatus);
-      fetchCandidates();
-    } catch (err) {
-      alert('Failed to update status: ' + err.message);
-    }
-  };
+  if (error) return (
+    <div className="page">
+      <div style={{ textAlign: 'center', padding: 60, color: '#D85A30' }}>
+        Error loading dashboard: {error}
+      </div>
+    </div>
+  );
+
+  const safeNum = (val) => Number(val) || 0;
 
   return (
     <div className="page">
-      <div className="page-header">
-        <div className="page-title">Candidate database</div>
-        <div className="page-sub">All registered candidates across drives.</div>
-      </div>
 
-      {/* Filter bar */}
-      <div className="filter-bar">
-        <div className="search-wrap">
-          <i className="ti ti-search" />
-          <input
-            type="text"
-            className="search-box"
-            placeholder="Search by name, college..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+      {/* Hero Banner */}
+      <div className="hero-banner">
+        <div>
+          <h2>Talent Corner Mega-Drive 2025</h2>
+          <p>Pan-India Pool Campus Initiative · 6 cities · 3-day drive</p>
         </div>
-        <select className="form-select" style={{ width: 130 }} value={cityFilter} onChange={e => setCityFilter(e.target.value)}>
-          <option value="">All cities</option>
-          <option>Pune</option><option>Bangalore</option>
-          <option>Hyderabad</option><option>Indore</option><option>Lucknow</option>
-        </select>
-        <select className="form-select" style={{ width: 130 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="">All status</option>
-          <option>Shortlisted</option><option>Screened</option>
-          <option>Offered</option><option>Interviewed</option>
-        </select>
-        <select className="form-select" style={{ width: 140 }} value={profileFilter} onChange={e => setProfileFilter(e.target.value)}>
-          <option value="">All profiles</option>
-          <option>Intern</option><option>Fresher</option>
-          <option>Experienced</option><option>Alumni</option>
-        </select>
+        <div className="hero-stat">
+          <div className="big">{safeNum(stats.registered).toLocaleString()}</div>
+          <div className="small">total registrations this season</div>
+        </div>
       </div>
 
-      {/* Table */}
-      {loading && <div className="empty">Loading candidates...</div>}
-      {error   && <div className="empty" style={{ color: '#D85A30' }}>Error: {error}</div>}
-      {!loading && !error && (
-        <div className="card" style={{ padding: 0 }}>
+      {/* Metric Cards */}
+      <div className="metrics">
+        <div className="metric-card">
+          <div className="metric-label">Registered candidates</div>
+          <div className="metric-val">{safeNum(stats.registered).toLocaleString()}</div>
+          <div className="metric-badge badge-green">Live from DB</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-label">Shortlisted</div>
+          <div className="metric-val">{safeNum(stats.shortlisted).toLocaleString()}</div>
+          <div className="metric-badge badge-purple">
+            {safeNum(stats.registered)
+              ? Math.round((safeNum(stats.shortlisted) / safeNum(stats.registered)) * 100)
+              : 0}% rate
+          </div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-label">Offers made</div>
+          <div className="metric-val">{safeNum(stats.offered).toLocaleString()}</div>
+          <div className="metric-badge badge-green">
+            {safeNum(stats.shortlisted)
+              ? Math.round((safeNum(stats.offered) / safeNum(stats.shortlisted)) * 100)
+              : 0}% conversion
+          </div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-label">Corporate partners</div>
+          <div className="metric-val">{safeNum(stats.partners)}</div>
+          <div className="metric-badge badge-amber">Active</div>
+        </div>
+      </div>
+
+      {/* Pipeline + Events */}
+      <div className="grid-2">
+
+        {/* Recruitment Pipeline */}
+        <div className="card">
+          <div className="card-title">
+            Recruitment pipeline
+            <i className="ti ti-filter" style={{ fontSize: 16, color: '#888' }} />
+          </div>
+          <div className="pipeline">
+            {PIPELINE_META.map(item => {
+              const count = safeNum(stats[item.key]);
+              const base  = safeNum(stats.registered);
+              const pct   = base ? Math.round((count / base) * 100) : 0;
+              return (
+                <div className="pipe-step" key={item.step}>
+                  <div className="pipe-left">
+                    <div className="pipe-num" style={{ background: item.bg, color: item.textColor }}>
+                      {item.step}
+                    </div>
+                    <div className="pipe-name">{item.label}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="progress-bar" style={{ width: 80 }}>
+                      <div className="progress-fill"
+                        style={{ width: `${pct}%`, background: item.color }} />
+                    </div>
+                    <div className="pipe-count" style={{ color: item.color, minWidth: 32 }}>
+                      {count.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Upcoming Events */}
+        <div className="card">
+          <div className="card-title">
+            Upcoming events
+            <i className="ti ti-calendar" style={{ fontSize: 16, color: '#888' }} />
+          </div>
+          <div className="event-list">
+            {events.length === 0 ? (
+              <div className="empty">No events yet.</div>
+            ) : events.map(ev => (
+              <div className="event-item" key={ev.id}>
+                <div className="event-dot" style={{ background: '#7F77DD' }} />
+                <div className="event-info">
+                  <div className="event-name">{ev.name}</div>
+                  <div className="event-meta">{ev.venue} · {ev.registered ?? 0} registered</div>
+                </div>
+                <div className="event-right">
+                  <div className="event-date">{ev.dates}</div>
+                  <div className="tag tag-purple" style={{ marginTop: 2 }}>{ev.status || 'Active'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Cities + B2B */}
+      <div className="grid-2">
+
+        {/* City Table */}
+        <div className="card">
+          <div className="card-title">
+            City-wise registrations
+            <i className="ti ti-map-pin" style={{ fontSize: 16, color: '#888' }} />
+          </div>
           <table className="table">
             <thead>
               <tr>
-                <th style={{ padding: '12px 16px' }}>Candidate</th>
-                <th>College</th><th>Profile</th>
-                <th>City</th><th>Score</th>
-                <th>Status</th><th>Action</th>
+                <th>City</th>
+                <th>Registered</th>
+                <th>Shortlisted</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {candidates.length === 0 ? (
-                <tr><td colSpan={7} className="empty">No candidates found.</td></tr>
-              ) : candidates.map(c => (
-                <tr key={c.id}>
-                  <td style={{ paddingLeft: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div className="avatar" style={{ background: '#EEEDFE', color: '#3C3489' }}>
-                        {c.name?.charAt(0)}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>{c.name}</div>
-                        <div style={{ fontSize: 11, color: '#888' }}>{c.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{c.college}</td>
-                  <td><span className="tag tag-purple">{c.profile}</span></td>
+              {MOCK_CITIES.map(c => (
+                <tr key={c.city}>
                   <td>{c.city}</td>
-                  <td>{c.score ?? '–'}</td>
-                  <td><span className="tag tag-green">{c.status}</span></td>
-                  <td>
-                    <select
-                      className="form-select"
-                      style={{ width: 130, fontSize: 12 }}
-                      value={c.status}
-                      onChange={e => handleStatusChange(c.id, e.target.value)}
-                    >
-                      <option>Registered</option>
-                      <option>Screened</option>
-                      <option>Shortlisted</option>
-                      <option>Interviewed</option>
-                      <option>Offered</option>
-                    </select>
-                  </td>
+                  <td>{c.reg}</td>
+                  <td>{c.short}</td>
+                  <td><span className={`tag ${c.tag}`}>{c.status}</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-      <div style={{ marginTop: 10, fontSize: 12, color: '#888', textAlign: 'right' }}>
-        {candidates.length} candidates shown
+
+        {/* B2B Leads */}
+        <div className="card">
+          <div className="card-title">
+            B2B leads captured
+            <i className="ti ti-briefcase" style={{ fontSize: 16, color: '#888' }} />
+          </div>
+          <div className="timeline">
+            {b2bleads.length === 0 ? (
+              <div className="empty">No B2B leads yet.</div>
+            ) : b2bleads.map((item, i) => (
+              <div className="tl-item" key={item.id || i}>
+                <div className="tl-line-wrap">
+                  <div className="tl-dot" style={{ background: '#7F77DD' }} />
+                  {i < b2bleads.length - 1 && <div className="tl-line" />}
+                </div>
+                <div className="tl-content">
+                  <div className="tl-title">{item.name} — {item.company}</div>
+                  <div className="tl-sub">{item.type} · {item.source}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
     </div>
   );

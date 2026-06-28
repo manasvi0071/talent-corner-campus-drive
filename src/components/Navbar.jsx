@@ -7,6 +7,7 @@ const tabs = [
   { id: 'events',     label: 'Events',     icon: 'ti-calendar-event' },
   { id: 'register',   label: 'Register',   icon: 'ti-user-plus' },
   { id: 'corporates', label: 'Corporates', icon: 'ti-building' },
+  { id: 'checklist',  label: 'Checklist',  icon: 'ti-checkbox' },
 ];
 
 export default function Navbar({ activePage, onNavigate, onLogout, admin }) {

@@ -6,6 +6,7 @@ import Events from './pages/Events';
 import Register from './pages/Register';
 import Corporates from './pages/Corporates';
 import Login from './pages/Login';
+import CityChecklist from './pages/CityChecklist';
 import './styles/global.css';
 
 const PAGES = {
@@ -14,10 +15,11 @@ const PAGES = {
   events:     <Events />,
   register:   <Register />,
   corporates: <Corporates />,
+  checklist:  <CityChecklist />,
 };
 
 export default function App() {
-  const [page, setPage]       = useState('dashboard');
+  const [page, setPage]         = useState('dashboard');
   const [loggedIn, setLoggedIn] = useState(false);
 
   if (!loggedIn) {
