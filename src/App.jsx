@@ -17,7 +17,7 @@ const PAGES = {
 };
 
 export default function App() {
-  const [page, setPage] = useState('dashboard');
+  const [page, setPage]       = useState('dashboard');
   const [loggedIn, setLoggedIn] = useState(false);
 
   if (!loggedIn) {
@@ -28,7 +28,11 @@ export default function App() {
     <>
       <Navbar activePage={page} onNavigate={setPage} />
       <main>
-        {PAGES[page]}
+        {PAGES[page] ?? (
+          <div style={{ padding: 48, textAlign: 'center', color: '#888' }}>
+            Page not found.
+          </div>
+        )}
       </main>
     </>
   );
